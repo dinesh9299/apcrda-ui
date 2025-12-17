@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+:root {
+  --bg-app: #f1f5f9;
+  --bg-card: #ffffff;
+
+  --primary-gradient: linear-gradient(180deg, #040405, #11111d, #060707);
+
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --purple: #a855f7;
+
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+}
