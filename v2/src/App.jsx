@@ -26,7 +26,6 @@
 // }
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import LocationDetails from "./pages/LocationDetails";
 
@@ -43,6 +42,7 @@ import L3 from "./pages/L3";
 import Locations from "./pages/Locations";
 import DashboardLayout from "./layouts/DashboardLayout";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import Login from "./pages/Login";
 
 export default function App() {
   return (
