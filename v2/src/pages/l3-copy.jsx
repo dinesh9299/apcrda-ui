@@ -13,8 +13,6 @@ import {
   Input,
   Space,
 } from "antd";
-import { Select } from "antd";
-
 import {
   ArrowRightOutlined,
   CheckCircleOutlined,
@@ -26,14 +24,12 @@ import { useNavigate } from "react-router";
 
 const API = "http://173.249.6.61:1337/api";
 const TOTAL_TASKS = 13;
-const TOTAL_WORK = TOTAL_TASKS;
+const TOTAL_WORK = TOTAL_TASKS + 1;
 
 // Color palette matching the design - 4 colors for stats, 1 for location cards
 const STAT_CARD_COLORS = [
   { bg: "#FFF7E6", border: "#FFD591", accent: "#FB9F3D" }, // Orange
   { bg: "#E6F9F9", border: "#87E8DE", accent: "#1E9CAD" }, // Teal
-  { bg: "#FFF1F0", border: "#FFA39E", accent: "#CF1322" }, // 🔴 On Hold (RED)
-
   { bg: "#F9F0FF", border: "#D3ADF7", accent: "#8B5CF6" }, // Purple
   { bg: "#E6F7FF", border: "#91D5FF", accent: "#1677ff" }, // Blue
 ];
@@ -52,7 +48,6 @@ export default function L3() {
   const [surveys, setSurveys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
 
   // ================= FETCH DATA =================
   useEffect(() => {
@@ -70,63 +65,28 @@ export default function L3() {
     });
   }, []);
 
-  const noPowerLocationIds = useMemo(() => {
-    return new Set(
-      surveys
-        .filter((s) => s.power_available !== "Yes")
-        .map((s) => s.location?.documentId)
+  const filteredLocations = useMemo(() => {
+    if (!search) return locations;
+    return locations.filter((loc) =>
+      loc.name.toLowerCase().includes(search.toLowerCase())
     );
-  }, [surveys]);
+  }, [locations, search]);
 
+  // ================= HELPERS =================
   const getLocationStats = (locationDocId) => {
     const locationTasks = tasks.filter(
       (t) => t.location?.documentId === locationDocId
     );
+    const uniqueCompletedTasks = new Set(locationTasks.map((t) => t.task_type))
+      .size;
+    const surveyDone = surveys.some(
+      (s) => s.location?.documentId === locationDocId
+    );
+    const completed = uniqueCompletedTasks + (surveyDone ? 1 : 0);
+    const percent = Math.round((completed / TOTAL_WORK) * 100);
 
-    // ✅ unique task count only
-    const taskCount = new Set(locationTasks.map((t) => t.task_type)).size;
-
-    // ✅ On Hold logic ONLY from survey
-    const onHold = noPowerLocationIds.has(locationDocId);
-
-    let status = "pending";
-    if (onHold) status = "onhold";
-    else if (taskCount === TOTAL_TASKS) status = "completed";
-    else if (taskCount > 0) status = "inprogress";
-
-    // ✅ progress ONLY from tasks
-    const percent = Math.round((taskCount / TOTAL_TASKS) * 100);
-
-    return {
-      taskCount,
-      onHold,
-      status,
-      percent,
-    };
+    return { completed, percent };
   };
-
-  // const getStatusFromPercent = (percent) => {
-  //   if (percent === 100) return "completed";
-  //   if (percent > 0) return "inprogress";
-  //   return "pending";
-  // };
-
-  const filteredLocations = useMemo(() => {
-    return locations.filter((loc) => {
-      const matchSearch = search
-        ? loc.name.toLowerCase().includes(search.toLowerCase())
-        : true;
-
-      const { status } = getLocationStats(loc.documentId);
-
-      const matchStatus = statusFilter === "all" || status === statusFilter;
-
-      return matchSearch && matchStatus;
-    });
-  }, [locations, search, statusFilter, tasks, surveys]);
-
-  // ================= HELPERS =================
-
   const CARD_COLORS = [
     { bg: "#FFF7E6", border: "#FFD591", accent: "#FB9F3D" },
     // { bg: "#E6F9F9", border: "#87E8DE", accent: "#1E9CAD" },
@@ -139,28 +99,22 @@ export default function L3() {
 
   // ================= DASHBOARD COUNTS =================
   const dashboardStats = useMemo(() => {
-    let completed = 0;
-    let inProgress = 0;
-    let pending = 0;
-    let onHold = 0;
+    let completedSites = 0;
+    let inProgressSites = 0;
 
     locations.forEach((loc) => {
-      const { status } = getLocationStats(loc.documentId);
-
-      if (status === "completed") completed++;
-      else if (status === "inprogress") inProgress++;
-      else if (status === "onhold") onHold++;
-      else pending++;
+      const { percent } = getLocationStats(loc.documentId);
+      if (percent === 100) completedSites++;
+      else if (percent > 0) inProgressSites++;
     });
 
     return {
       total: locations.length,
-      completed,
-      inProgress,
-      pending,
-      onHold,
+      completed: completedSites,
+      inProgress: inProgressSites,
+      pending: locations.length - completedSites - inProgressSites,
     };
-  }, [locations, tasks, surveys, noPowerLocationIds]);
+  }, [locations, tasks, surveys]);
 
   // ================= UI =================
   if (loading) {
@@ -232,12 +186,6 @@ export default function L3() {
               icon: <CheckCircleOutlined />,
             },
             {
-              title: "On Hold Sites",
-              value: dashboardStats.onHold,
-              icon: <ClockCircleOutlined />,
-            },
-
-            {
               title: "In Progress",
               value: dashboardStats.inProgress,
               icon: <ClockCircleOutlined />,
@@ -252,10 +200,9 @@ export default function L3() {
                   : "",
             },
           ].map((stat, index) => {
-            const color = STAT_CARD_COLORS[index % STAT_CARD_COLORS.length];
+            const color = STAT_CARD_COLORS[index];
             return (
-              <Col key={index} flex="1" style={{ minWidth: 220 }}>
-                {" "}
+              <Col xs={24} sm={12} md={6} key={index}>
                 <Card
                   hoverable
                   style={{
@@ -302,33 +249,16 @@ export default function L3() {
         </Row>
 
         {/* ================= SEARCH & FILTER ================= */}
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            flexWrap: "wrap",
-            margin: "16px 0 24px 0",
-          }}
-        >
+        <div style={{ maxWidth: 400, margin: "16px 0 24px 0" }}>
           <Input.Search
             placeholder="Search location..."
             allowClear
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ maxWidth: 260 }}
+            style={{
+              borderRadius: 8,
+            }}
           />
-
-          <Select
-            value={statusFilter}
-            onChange={setStatusFilter}
-            style={{ width: 200 }}
-          >
-            <Select.Option value="all">All Sites</Select.Option>
-            <Select.Option value="completed">🟢 Completed</Select.Option>
-            <Select.Option value="onhold">⛔ On Hold</Select.Option>
-            <Select.Option value="inprogress">🔵 In Progress</Select.Option>
-            <Select.Option value="pending">⚪ Pending</Select.Option>
-          </Select>
         </div>
 
         {/* ================= LOCATIONS GRID ================= */}
@@ -353,26 +283,21 @@ export default function L3() {
         ) : (
           <Row gutter={[16, 16]}>
             {filteredLocations.map((loc, index) => {
-              const { completed } = getLocationStats(loc.documentId);
+              const { completed, percent } = getLocationStats(loc.documentId);
               const cardColor = getCardColor(index);
 
-              const { taskCount, status, percent } = getLocationStats(
-                loc.documentId
-              );
-
+              let tagColor = "default";
               let tagText = "Pending";
               let progressStatus = "normal";
               let progressColor = cardColor.accent;
 
-              if (status === "onhold") {
-                tagText = "On Hold (No Power)";
-                progressStatus = "exception";
-                progressColor = "#CF1322";
-              } else if (status === "completed") {
+              if (percent === 100) {
+                tagColor = "success";
                 tagText = "Completed";
                 progressStatus = "success";
                 progressColor = "#52c41a";
-              } else if (status === "inprogress") {
+              } else if (percent > 0) {
+                tagColor = "processing";
                 tagText = "In Progress";
                 progressStatus = "active";
               }
@@ -422,15 +347,17 @@ export default function L3() {
                         </h3>
                         <Tag
                           color={
-                            status === "onhold"
-                              ? "red"
-                              : percent === 100
-                              ? "green"
+                            percent === 100
+                              ? "#52c41a"
                               : percent > 0
                               ? cardColor.accent
-                              : "default"
+                              : "#d9d9d9"
                           }
-                          style={{ fontWeight: 600 }}
+                          style={{
+                            color: percent === 100 ? "black" : "orange",
+                            fontWeight: 600,
+                            width: "fit-content",
+                          }}
                         >
                           {tagText}
                         </Tag>
@@ -470,7 +397,7 @@ export default function L3() {
                             fontSize: 14,
                           }}
                         >
-                          {taskCount} / {TOTAL_TASKS}
+                          {completed} / {TOTAL_WORK}
                         </span>
                       </div>
                       <span

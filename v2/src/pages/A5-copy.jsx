@@ -49,7 +49,7 @@ import { LocateFixed } from "lucide-react";
 const { Title, Text } = Typography;
 
 const API = "http://173.249.6.61:1337/api";
-const TOTAL_TASKS = 13;
+const TOTAL_WORK = 14;
 
 // Color palette matching Locations Page
 const STAT_CARD_COLORS = [
@@ -57,11 +57,6 @@ const STAT_CARD_COLORS = [
   { bg: "#E6F9F9", border: "#87E8DE", accent: "#1E9CAD" }, // Teal
   { bg: "#F9F0FF", border: "#D3ADF7", accent: "#8B5CF6" }, // Purple
   { bg: "#E6F7FF", border: "#91D5FF", accent: "#1677ff" }, // Blue
-  {
-    bg: "#FFF1F0", // soft red background
-    border: "#FFA39E", // light red border
-    accent: "#CF1322", // strong red accent
-  },
 ];
 
 const CARD_COLORS = {
@@ -140,61 +135,34 @@ export default function A5() {
       });
   }, []);
 
-  const noPowerLocationIds = useMemo(() => {
-    return new Set(
-      surveys
-        .filter((s) => s.power_available !== "Yes")
-        .map((s) => s.location?.documentId)
-    );
-  }, [surveys]);
-
   const siteProgress = useMemo(() => {
     return locations.map((loc) => {
       const taskCount = tasks.filter(
         (t) => t.location?.documentId === loc.documentId
       ).length;
-
       const surveyDone = surveys.some(
         (s) => s.location?.documentId === loc.documentId
       );
-
-      const onHold = noPowerLocationIds.has(loc.documentId);
-
-      const percent = Math.round((taskCount / TOTAL_TASKS) * 100);
-
-      return {
-        key: loc.documentId,
-        name: loc.name,
-        taskCount,
-        surveyDone,
-        onHold, // 🔥 NEW
-        completed: taskCount,
-        percent,
-      };
+      const completed = taskCount + (surveyDone ? 1 : 0);
+      const percent = Math.round((completed / TOTAL_WORK) * 100);
+      return { key: loc.documentId, name: loc.name, completed, percent };
     });
-  }, [locations, tasks, surveys, noPowerLocationIds]);
+  }, [locations, tasks, surveys]);
 
   const totalLocations = locations.length;
-  const sitesCompleted = siteProgress.filter((s) => s.taskCount === 13).length;
+  const sitesCompleted = siteProgress.filter((s) => s.percent === 100).length;
   const sitesInProgress = siteProgress.filter(
-    (s) => s.taskCount > 0 && s.percent < 100
+    (s) => s.percent > 0 && s.percent < 100
   ).length;
+  const sitesPending = totalLocations - sitesCompleted - sitesInProgress;
 
-  const sitesOnHold = siteProgress.filter((s) => s.onHold).length;
-
-  const sitesPending =
-    siteProgress.filter((s) => s.taskCount === 0).length - sitesOnHold;
-
-  const completedWork = siteProgress.reduce((sum, s) => sum + s.taskCount, 0);
-
-  const overallWork = totalLocations * TOTAL_TASKS;
-
+  const completedWork = siteProgress.reduce((sum, s) => sum + s.completed, 0);
+  const overallWork = totalLocations * TOTAL_WORK;
   const overallPercent = Math.round((completedWork / overallWork) * 100);
 
   const statusChart = [
     { name: "Completed", value: sitesCompleted, fill: "#52c41a" },
     { name: "In Progress", value: sitesInProgress, fill: "#FB9F3D" },
-    { name: "On Hold", value: sitesOnHold, fill: "#f00" }, // 🔥 NEW
     { name: "Pending", value: sitesPending, fill: "#d9d9d9" },
   ];
 
@@ -223,12 +191,11 @@ export default function A5() {
   //   remaining: TOTAL_WORK - site.completed,
   // }));
 
-  const barChartData = siteProgress.slice(0, 10).map((site, index) => ({
-    id: site.key,
-    fullName: site.name,
-    name: `Site ${index + 1}`, // unique label
+  const barChartData = siteProgress.slice(0, 10).map((site) => ({
+    fullName: site.name, // ✅ full name for hover
+    name: site.name.length > 15 ? `${site.name.slice(0, 12)}...` : site.name, // short label for X-axis
     completed: site.completed,
-    remaining: TOTAL_TASKS - site.completed,
+    remaining: TOTAL_WORK - site.completed,
   }));
 
   const columns = [
@@ -251,7 +218,7 @@ export default function A5() {
     },
     {
       title: "Task Status",
-      dataIndex: "taskCount",
+      dataIndex: "completed",
       render: (v) => (
         <Tag
           icon={<CheckCircleOutlined />}
@@ -264,7 +231,7 @@ export default function A5() {
             color: "black",
           }}
         >
-          {v} / 13
+          {v} / {TOTAL_WORK}
         </Tag>
       ),
       width: 130,
@@ -286,110 +253,70 @@ export default function A5() {
       ),
       width: 150,
     },
-    // {
-    //   title: "Status",
-    //   render: (_, record) => {
-    //     let color = "default";
-    //     let text = "Pending";
-
-    //     if (record.taskCount === 13) {
-    //       color = "green";
-    //       text = "Completed";
-    //     } else if (record.taskCount > 0) {
-    //       color = "orange";
-    //       text = "In Progress";
-    //     } else if (record.surveyDone) {
-    //       color = "blue";
-    //       text = "Survey Completed";
-    //     }
-
-    //     return (
-    //       <Tag color={color} style={{ fontWeight: 600, color: "black" }}>
-    //         {text}
-    //       </Tag>
-    //     );
-    //   },
-    //   width: 160,
-    //   align: "center",
-    // },
-
     {
       title: "Status",
-      render: (_, record) => {
-        if (record.onHold) {
-          return (
-            <Tag color="red" style={{ fontWeight: 600 }}>
-              On Hold (No Power)
-            </Tag>
-          );
+      dataIndex: "percent",
+      render: (p) => {
+        let color = "default";
+        let text = "Pending";
+        if (p === 100) {
+          color = "green";
+          text = "Completed";
+        } else if (p > 0) {
+          color = "orange";
+          text = "In Progress";
         }
-
-        if (record.taskCount === TOTAL_TASKS) {
-          return <Tag color="green">Completed</Tag>;
-        }
-
-        if (record.taskCount > 0) {
-          return <Tag color="orange">In Progress</Tag>;
-        }
-
-        if (record.surveyDone) {
-          return <Tag color="blue">Survey Completed</Tag>;
-        }
-
-        return <Tag>Pending</Tag>;
+        return (
+          <Tag color={color} style={{ fontWeight: 600, color: "black" }}>
+            {text}
+          </Tag>
+        );
       },
-      width: 180,
+      width: 130,
       align: "center",
     },
   ];
 
-  const taskWork = useMemo(() => {
-    return tasks.map((t) => ({
-      createdAt: t.createdAt,
-    }));
-  }, [tasks]);
+  const allWork = useMemo(() => {
+    return [
+      ...tasks.map((t) => ({ type: "task", createdAt: t.createdAt })),
+      ...surveys.map((s) => ({ type: "survey", createdAt: s.createdAt })),
+    ];
+  }, [tasks, surveys]);
 
   const hourlyStats = useMemo(() => {
     const hours = Array.from({ length: 24 }, (_, h) => ({
       hour: `${String(h).padStart(2, "0")}:00`,
       count: 0,
     }));
-
     const today = new Date().toISOString().slice(0, 10);
-
-    taskWork.forEach((w) => {
+    allWork.forEach((w) => {
       const date = new Date(w.createdAt);
       if (date.toISOString().slice(0, 10) === today) {
         hours[date.getHours()].count += 1;
       }
     });
-
     return hours;
-  }, [taskWork]);
+  }, [allWork]);
 
   const dayWiseStats = useMemo(() => {
     const days = {};
     const today = new Date();
-
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
-
       const key = d.toISOString().slice(0, 10);
       const dayName = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
         d.getDay()
       ];
-
-      days[key] = { date: dayName, count: 0 };
+      days[key] = { date: dayName, fullDate: key.slice(5), count: 0 };
     }
-
-    taskWork.forEach((w) => {
+    allWork.forEach((w) => {
       const d = w.createdAt?.slice(0, 10);
       if (days[d]) days[d].count += 1;
     });
-
     return Object.values(days);
-  }, [taskWork]);
+  }, [allWork]);
 
   if (loading) {
     return (
@@ -513,8 +440,8 @@ linear-gradient(
         </div>
 
         {/* ================= STATS CARDS ================= */}
-        <Row gutter={16} style={{ marginBottom: 32 }}>
-          <Col flex="1 1 20%" style={{ minWidth: 220 }}>
+        <Row gutter={[16, 16]} style={{ marginBottom: 32 }}>
+          <Col xs={24} sm={12} md={6}>
             <KPICard
               title="Total Locations"
               value={totalLocations}
@@ -522,8 +449,7 @@ linear-gradient(
               colorIndex={0}
             />
           </Col>
-
-          <Col flex="1 1 20%" style={{ minWidth: 220 }}>
+          <Col xs={24} sm={12} md={6}>
             <KPICard
               title="Completed Sites"
               value={sitesCompleted}
@@ -531,17 +457,7 @@ linear-gradient(
               colorIndex={1}
             />
           </Col>
-
-          <Col flex="1 1 20%" style={{ minWidth: 220 }}>
-            <KPICard
-              title="On Hold Sites"
-              value={sitesOnHold}
-              icon={<ClockCircleOutlined />}
-              colorIndex={4}
-            />
-          </Col>
-
-          <Col flex="1 1 20%" style={{ minWidth: 220 }}>
+          <Col xs={24} sm={12} md={6}>
             <KPICard
               title="In Progress"
               value={sitesInProgress}
@@ -549,8 +465,7 @@ linear-gradient(
               colorIndex={2}
             />
           </Col>
-
-          <Col flex="1 1 20%" style={{ minWidth: 220 }}>
+          <Col xs={24} sm={12} md={6}>
             <KPICard
               title="Overall Progress"
               value={overallPercent}
@@ -775,27 +690,6 @@ linear-gradient(
                             style={{
                               fontSize: 18,
                               fontWeight: 900,
-                              color: "#f00",
-                            }}
-                          >
-                            {sitesCompleted}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 11,
-                              color: "#666",
-                              fontWeight: 600,
-                              marginTop: 2,
-                            }}
-                          >
-                            On Hold
-                          </div>
-                        </div>
-                        <div style={{ textAlign: "center" }}>
-                          <div
-                            style={{
-                              fontSize: 18,
-                              fontWeight: 900,
                               color: "#FB9F3D",
                             }}
                           >
@@ -979,7 +873,7 @@ linear-gradient(
                 suffix={
                   <span style={{ fontSize: 16, color: "#262626" }}>
                     {" "}
-                    / {totalLocations * TOTAL_TASKS}
+                    / {totalLocations * TOTAL_WORK}
                   </span>
                 }
                 valueStyle={{ color: CARD_COLORS.teal.accent, fontSize: 28 }}

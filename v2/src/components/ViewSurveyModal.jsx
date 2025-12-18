@@ -170,6 +170,7 @@ export default function ViewSurveyModal({ open, onClose, survey }) {
                         }}
                         onClick={() => handleImageClick(img)}
                       >
+                        {/** */}
                         <img
                           src={`${API}${img.url}`}
                           alt={img.name || "survey"}
@@ -252,7 +253,7 @@ export default function ViewSurveyModal({ open, onClose, survey }) {
                   justifyContent: "center",
                 }}
               >
-                <Typography
+                {/* <Typography
                   variant="h5"
                   gutterBottom
                   sx={{
@@ -263,7 +264,7 @@ export default function ViewSurveyModal({ open, onClose, survey }) {
                   }}
                 >
                   {previewTitle}
-                </Typography>
+                </Typography> */}
 
                 <Box
                   component="img"

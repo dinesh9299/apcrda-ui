@@ -251,6 +251,21 @@ export default function ViewTaskModal({ open, onClose, task }) {
     setPreviewOpen(false);
   };
 
+  const formatDateTime = (isoString) => {
+    if (!isoString) return "-";
+
+    const date = new Date(isoString);
+
+    return date.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
   return (
     <>
       {/* Main Task Dialog - Slide Up + Fade In */}
@@ -298,8 +313,9 @@ export default function ViewTaskModal({ open, onClose, task }) {
                 <b>Task Type:</b> {task.task_type || "-"}
               </Typography>
               <Typography gutterBottom>
-                <b>Completed At:</b> {task.completed_at || "-"}
+                <b>Completed At:</b> {formatDateTime(task.completed_at)}
               </Typography>
+
               <Typography gutterBottom sx={{ whiteSpace: "pre-wrap" }}>
                 <b>Remarks:</b> {task.remarks || "-"}
               </Typography>
@@ -443,7 +459,7 @@ export default function ViewTaskModal({ open, onClose, task }) {
                         textShadow: "0 2px 8px rgba(0,0,0,0.2)",
                       }}
                     >
-                      {previewTitle}
+                      {/* {previewTitle} */}
                     </Typography>
 
                     <Box

@@ -43,13 +43,14 @@ import Locations from "./pages/Locations";
 import DashboardLayout from "./layouts/DashboardLayout";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Login from "./pages/Login";
+import SurveysPage from "./pages/surveys/surveys";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-
+        {/* 
         <Route
           element={
             <ProtectedRoute>
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="/" element={<A5 />} />
           <Route path="/locations" element={<L3 />} />
           <Route path="/locations/:id" element={<LocationDetails />} />
+          <Route path="/surveys" element={<SurveysPage />} />
 
           <Route path="/1" element={<A1 />} />
           <Route path="/2" element={<A2 />} />
@@ -70,7 +72,16 @@ export default function App() {
           <Route path="/l1" element={<L1 />} />
           <Route path="/l2" element={<L2 />} />
           <Route path="/l3" element={<L3 />} />
+        </Route> */}
+
+        <Route element={<DashboardLayout />}>
+          <Route path="/" element={<A5 />} />
+          <Route path="/locations" element={<L3 />} />
+          <Route path="/locations/:id" element={<LocationDetails />} />
+          <Route path="/surveys" element={<SurveysPage />} />
         </Route>
+
+        <Route path="/login" element={<Login />} />
       </Routes>
     </BrowserRouter>
   );

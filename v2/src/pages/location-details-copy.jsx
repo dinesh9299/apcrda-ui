@@ -435,12 +435,8 @@ export default function LocationDetails() {
     [completedTaskTypes]
   );
 
-  const completedCount = completedTaskTypes.length;
+  const completedCount = completedTaskTypes.length + (survey ? 1 : 0);
   const progressPercent = Math.round((completedCount / TOTAL_WORK) * 100);
-  const isOnHold =
-    survey && survey.power_available && survey.power_available !== "Yes";
-
-  const canUpdateTask = isAdmin && survey && survey.power_available === "Yes";
 
   /* ---------------- STATES ---------------- */
   if (loading) {
@@ -517,9 +513,7 @@ export default function LocationDetails() {
             <Col xs={24} sm={8} style={{ textAlign: "right" }}>
               <Tag
                 color={
-                  isOnHold
-                    ? "red"
-                    : progressPercent === 100
+                  progressPercent === 100
                     ? "#52c41a"
                     : progressPercent > 0
                     ? CARD_COLORS.orange.accent
@@ -529,14 +523,10 @@ export default function LocationDetails() {
                   fontSize: 12,
                   fontWeight: 600,
                   padding: "6px 12px",
-                  color: isOnHold ? "black" : "black",
+                  color: "black",
                 }}
               >
-                {isOnHold
-                  ? "⛔ ON HOLD (NO POWER)"
-                  : progressPercent === 100
-                  ? "✓ COMPLETED"
-                  : "IN PROGRESS"}
+                {progressPercent === 100 ? "✓ COMPLETED" : "IN PROGRESS"}
               </Tag>
             </Col>
           </Row>
@@ -551,14 +541,8 @@ export default function LocationDetails() {
               <div style={{ marginTop: 8 }}>
                 <Progress
                   percent={progressPercent}
-                  status={
-                    isOnHold
-                      ? "exception"
-                      : progressPercent === 100
-                      ? "success"
-                      : "active"
-                  }
-                  strokeColor={isOnHold ? "#cf1322" : CARD_COLORS.orange.accent}
+                  status={progressPercent === 100 ? "success" : "active"}
+                  strokeColor={CARD_COLORS.orange.accent}
                   format={(p) => `${completedCount} / ${TOTAL_WORK}`}
                 />
               </div>
@@ -610,31 +594,25 @@ export default function LocationDetails() {
                   <div
                     style={{
                       padding: "12px",
-                      backgroundColor: isOnHold
-                        ? "rgba(207, 19, 34, 0.1)"
-                        : "rgba(82, 196, 26, 0.1)",
+                      backgroundColor: "rgba(82, 196, 26, 0.1)",
                       borderRadius: 8,
-                      borderLeft: `4px solid ${
-                        isOnHold ? "#cf1322" : "#52c41a"
-                      }`,
+                      borderLeft: "4px solid #52c41a",
                     }}
                   >
-                    <Text
-                      strong
-                      style={{
-                        color: isOnHold ? "#cf1322" : "#52c41a",
-                        fontSize: 14,
-                      }}
-                    >
-                      {isOnHold
-                        ? "⛔ Power Not Available"
-                        : "✓ Survey Completed"}
+                    <Text strong style={{ color: "#52c41a", fontSize: 14 }}>
+                      ✓ Survey Completed
                     </Text>
                   </div>
-
                   <Button
                     icon={<EyeOutlined />}
                     onClick={() => setOpenViewSurvey(true)}
+                    style={{
+                      borderRadius: 8,
+                      height: 40,
+                      fontWeight: 600,
+                      border: `2px solid ${CARD_COLORS.teal.accent}`,
+                      color: CARD_COLORS.teal.accent,
+                    }}
                     block
                   >
                     View Survey Details
@@ -800,16 +778,19 @@ export default function LocationDetails() {
                 {isAdmin && (
                   <Button
                     type="primary"
+                    icon={<EditOutlined />}
                     block
-                    disabled={!canUpdateTask}
-                    danger={!canUpdateTask}
                     onClick={() => setOpenTaskModal(true)}
+                    style={{
+                      background: CARD_COLORS.orange.accent,
+                      borderColor: CARD_COLORS.orange.accent,
+                      borderRadius: 8,
+                      height: 42,
+                      fontWeight: 600,
+                      fontSize: 14,
+                    }}
                   >
-                    {!survey
-                      ? "Survey Required to Update Tasks"
-                      : isOnHold
-                      ? "On Hold – Power Required"
-                      : "Update Task Status"}
+                    Update Task Status
                   </Button>
                 )}
               </div>

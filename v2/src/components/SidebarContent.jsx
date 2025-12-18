@@ -110,23 +110,25 @@
 // }
 
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, MapPin } from "lucide-react";
+import { LayoutDashboard, MapPin, ClipboardCheck } from "lucide-react";
 import logo from "../images/logob1.png";
 import logo1 from "../images/logob2.png";
-import { getUser, logout } from "../utils/auth";
 import { useNavigate } from "react-router-dom";
-import { Avatar } from "antd";
+import { Avatar, Button } from "antd";
 import { UserOutlined, LogoutOutlined } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion"; // Add this
+import { isAuthenticated, logout, getUser } from "../utils/auth";
 
 const menu = [
   { name: "Dashboard", path: "/", icon: LayoutDashboard },
   { name: "Locations", path: "/locations", icon: MapPin },
+  { name: "Surveys", path: "/surveys", icon: ClipboardCheck },
 ];
 
 export default function SidebarContent({ collapsed, onItemClick }) {
   const user = getUser();
   const navigate = useNavigate();
+  const isLoggedIn = isAuthenticated();
 
   return (
     <div className="h-full flex flex-col transition-all duration-300 ease-in-out">
@@ -199,7 +201,7 @@ export default function SidebarContent({ collapsed, onItemClick }) {
       </nav>
 
       {/* USER BOTTOM SECTION */}
-      <div
+      {/* <div
         className={`border-t border-slate-700/20 p-3 flex items-center transition-all duration-300 ${
           collapsed ? "justify-center" : "gap-3"
         }`}
@@ -238,6 +240,47 @@ export default function SidebarContent({ collapsed, onItemClick }) {
           >
             <LogoutOutlined />
           </motion.button>
+        )}
+      </div> */}
+
+      <div
+        className={`border-t p-3 flex items-center ${
+          collapsed ? "justify-center" : "gap-3"
+        }`}
+      >
+        {isLoggedIn ? (
+          <>
+            <Avatar icon={<UserOutlined />} />
+            {!collapsed && (
+              <>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold">{user?.email}</div>
+                  <div className="text-xs text-gray-500">
+                    {user?.role?.name}
+                  </div>
+                </div>
+                <button
+                  className="cursor-pointer"
+                  onClick={() => {
+                    logout();
+                    navigate("/", { replace: true });
+                  }}
+                >
+                  <LogoutOutlined />
+                </button>
+              </>
+            )}
+          </>
+        ) : (
+          <div
+            onClick={() => navigate("/login")}
+            className=" shadow-2xl cursor-pointer px-3 py-1 text-blue-500 rounded-md bg-white/40"
+          >
+            <span>
+              <UserOutlined />
+            </span>
+            <button className="ml-2 cursor-pointer">Login</button>
+          </div>
         )}
       </div>
     </div>
